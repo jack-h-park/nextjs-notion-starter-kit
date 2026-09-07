@@ -160,20 +160,48 @@ The retry sends `config: { ...currentConfig, presetId: targetPresetId }` to the 
 
 The button is suppressed for chitchat and command routes even though those also produce `insufficient: true`, because those routes intentionally skip retrieval.
 
+## Reasoning Effort
+
+Reasoning effort resolves in one order, implemented by `resolveReasoningEffort()` in
+`lib/server/admin-chat-config.ts`:
+
+```
+preset.reasoningEffort  ->  generation.reasoningEffort  ->  provider default
+```
+
+- **Per-preset** (`presets.<key>.reasoningEffort`, admin dashboard → Session presets →
+  *Reasoning Effort*). Leave it on **Inherit** to follow the global setting. Inherit is the
+  default for every preset, so nothing changes until you set one.
+- **Global** (`generation.reasoningEffort`, admin dashboard → Generation controls). Applies to
+  every preset left on Inherit.
+- `provider-default` at either level means *send no reasoning parameter at all* — the resolver
+  returns `undefined` and the provider factory omits the field.
+
+Two distinctions worth keeping straight:
+
+- **An unset preset override is inheritance, not `none`.** On a reasoning model those behave
+  very differently: `none` suppresses reasoning, inheritance may enable it. Never read
+  `preset.reasoningEffort` directly; call `resolveReasoningEffort()`.
+- **The setting is inert on models that do not support reasoning effort.** The provider factory
+  forwards it only when the resolved model declares `supportsReasoningEffort` in
+  `lib/shared/models.ts`. The admin UI marks that case with a warning icon rather than hiding
+  the control, since the preset may be pointed at a reasoning model later.
+
+The effective value is recorded per request in the telemetry config snapshot as
+`reasoningEffort`, so a Langfuse trace shows what the model was actually asked to do — not just
+which model ran.
+
+### Why this is per-preset
+
+A single global effort is adequate while every preset shares a model family. It stops being
+adequate as soon as presets differ in how much thinking they should do — notably, pointing Fast
+at a reasoning model without pinning its effort makes the *speed* preset spend most completion
+tokens on reasoning. See
+[preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md).
+
 ## Related Docs
 
 - [guardrail-system.md](../canonical/guardrails/guardrail-system.md)
 - [rag-system.md](../canonical/rag/rag-system.md)
 - [settings-ownership-audit-local-adapter.md](./settings-ownership-audit-local-adapter.md)
 - [preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md)
-
-## Reasoning Effort Is Global, Not Per-Preset
-
-`AdminChatConfig.generation.reasoningEffort` is a single top-level field (a sibling of
-`presets`), applied to whichever presets happen to resolve to a reasoning-capable model. It is
-configurable in the admin dashboard under **Generation controls**, with five values from
-`provider-default` to `high`.
-
-There is no per-preset reasoning effort. "Fast at `none`, Balanced at `medium`" is not
-expressible today. This matters as soon as presets stop sharing one model family — see
-[preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md#known-gap-reasoning-effort-is-global-not-per-preset).

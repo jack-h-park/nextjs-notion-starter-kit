@@ -33,7 +33,10 @@ import {
   telemetryLogger,
 } from "@/lib/logging/logger";
 import { buildChatConfigSnapshot } from "@/lib/rag/telemetry";
-import { getAdminChatConfig } from "@/lib/server/admin-chat-config";
+import {
+  getAdminChatConfig,
+  resolveReasoningEffort,
+} from "@/lib/server/admin-chat-config";
 import { computeHistorySummaryHash } from "@/lib/server/api/chat-cache-keys";
 import {
   createChatHttpRuntime,
@@ -1132,9 +1135,7 @@ export async function handleLangchainChat(
         candidate,
         temperature,
         MAX_TOKENS,
-        adminConfig.generation?.reasoningEffort === "provider-default"
-          ? undefined
-          : adminConfig.generation?.reasoningEffort,
+        resolveReasoningEffort(adminConfig, presetId),
       );
 
       try {

@@ -58,6 +58,7 @@ export function buildTestChatConfigSnapshot(
     presetKey: "default",
     safeMode: false,
     llmModel: "mistral-ollama",
+    reasoningEffort: "provider-default",
     embeddingModel: "text-embedding-3-small",
     rag: {
       enabled: true,

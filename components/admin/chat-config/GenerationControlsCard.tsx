@@ -1,6 +1,9 @@
 import { FiSliders } from "@react-icons/all-files/fi/FiSliders";
 
-import type { AdminChatConfig, AdminReasoningEffort } from "@/types/chat-config";
+import type {
+  AdminChatConfig,
+  AdminReasoningEffort,
+} from "@/types/chat-config";
 import {
   ChatConfigCardContent,
   ChatConfigCardHeader,
@@ -14,11 +17,31 @@ const REASONING_EFFORT_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { value: "provider-default", label: "Provider default", description: "Use the model's default reasoning setting." },
-  { value: "none", label: "None", description: "Minimize reasoning tokens for the lowest latency and cost." },
-  { value: "low", label: "Low", description: "Use limited reasoning for latency-sensitive answers." },
-  { value: "medium", label: "Medium", description: "Use balanced reasoning for supported models." },
-  { value: "high", label: "High", description: "Use more reasoning when the quality gain justifies the cost." },
+  {
+    value: "provider-default",
+    label: "Provider default",
+    description: "Use the model's default reasoning setting.",
+  },
+  {
+    value: "none",
+    label: "None",
+    description: "Minimize reasoning tokens for the lowest latency and cost.",
+  },
+  {
+    value: "low",
+    label: "Low",
+    description: "Use limited reasoning for latency-sensitive answers.",
+  },
+  {
+    value: "medium",
+    label: "Medium",
+    description: "Use balanced reasoning for supported models.",
+  },
+  {
+    value: "high",
+    label: "High",
+    description: "Use more reasoning when the quality gain justifies the cost.",
+  },
 ];
 
 export function GenerationControlsCard({
@@ -35,7 +58,7 @@ export function GenerationControlsCard({
       <ChatConfigCardHeader
         icon={<FiSliders aria-hidden="true" />}
         title="Generation controls"
-        description="Control reasoning for supported OpenAI models. Temperature remains provider-managed for GPT-5.6."
+        description="Fallback reasoning effort for supported OpenAI models. Any preset that sets its own effort overrides this. Temperature remains provider-managed for GPT-5.6."
       />
       <ChatConfigCardContent className="space-y-4">
         <div className="ai-field">
@@ -62,7 +85,9 @@ export function GenerationControlsCard({
             ))}
           </div>
           <p className="ai-field__description">
-            This is applied only to models that support reasoning effort. Other models keep their existing behavior.
+            Applied only to models that support reasoning effort, and only to
+            presets left on <strong>Inherit</strong> in Session presets. Other
+            models keep their existing behavior.
           </p>
         </div>
       </ChatConfigCardContent>

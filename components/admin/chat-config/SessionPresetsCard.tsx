@@ -35,10 +35,7 @@ import {
 } from "@/hooks/use-admin-chat-config";
 import { listEmbeddingModelOptions } from "@/lib/core/embedding-spaces";
 import { normalizeLlmModelId } from "@/lib/core/llm-registry";
-import {
-  RANKER_LABELS,
-  SUMMARY_LEVEL_LABELS,
-} from "@/lib/shared/chat-labels";
+import { RANKER_LABELS, SUMMARY_LEVEL_LABELS } from "@/lib/shared/chat-labels";
 import {
   type EmbeddingModelId,
   type LlmModelId,
@@ -47,12 +44,25 @@ import {
 import {
   type AdminChatConfig,
   type AdminChatRuntimeMeta,
+  type AdminReasoningEffort,
   type SummaryLevel,
 } from "@/types/chat-config";
 
-
 const summaryLevelOptions: SummaryLevel[] = ["off", "low", "medium", "high"];
 const EMBEDDING_MODEL_OPTIONS = listEmbeddingModelOptions();
+
+const INHERIT_REASONING_EFFORT = "inherit";
+
+const PRESET_REASONING_EFFORT_OPTIONS: Array<{
+  value: AdminReasoningEffort;
+  label: string;
+}> = [
+  { value: "provider-default", label: "Provider default" },
+  { value: "none", label: "None" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
 
 const SECTION_FIELD_LABEL_CLASS =
   "ai-label-overline ai-label-overline--small ai-label-overline--muted";
@@ -101,9 +111,7 @@ function RetrievalSection({
       data-disabled={ragDisabled}
     >
       <SectionHeader className="items-center justify-between">
-        <SectionTitle as="h3">
-          Enabled
-        </SectionTitle>
+        <SectionTitle as="h3">Enabled</SectionTitle>
         <Switch
           className="flex-shrink-0"
           aria-label={`Enable Retrieval (RAG) for ${displayName}`}
@@ -277,6 +285,22 @@ export function SessionPresetsCard({
     }));
   };
 
+  // "inherit" is a UI-only sentinel: Select cannot hold undefined, but undefined
+  // is exactly what an inheriting preset must store, so the two are mapped here
+  // and nowhere else.
+  const handlePresetReasoningEffortChange = (
+    presetKey: PresetKey,
+    value: string,
+  ) => {
+    updatePreset(presetKey, (prev) => ({
+      ...prev,
+      reasoningEffort:
+        value === INHERIT_REASONING_EFFORT
+          ? undefined
+          : (value as AdminReasoningEffort),
+    }));
+  };
+
   const handleRequireLocalChange = (presetKey: PresetKey, checked: boolean) => {
     updatePreset(presetKey, (prev) => ({
       ...prev,
@@ -408,10 +432,7 @@ export function SessionPresetsCard({
     renderCell: (presetKey: PresetKey) => React.ReactNode,
     rowIndex: number,
   ) => {
-    const tone =
-      rowIndex % 2 === 0
-        ? ""
-        : "bg-[var(--ai-role-surface-0)]";
+    const tone = rowIndex % 2 === 0 ? "" : "bg-[var(--ai-role-surface-0)]";
     return (
       <div
         key={`${label}-${rowIndex}`}
@@ -638,6 +659,59 @@ export function SessionPresetsCard({
                 </div>
               );
             })}
+            {renderRow("Reasoning Effort", (presetKey) => {
+              const preset = presets[presetKey];
+              const modelOption = llmModelOptions.find(
+                (option) => option.id === preset.llmModel,
+              );
+              // The control stays enabled on a model that ignores reasoning: the
+              // preset may be pointed at a reasoning model later, and silently
+              // dropping the stored value would be worse than showing it is
+              // currently inert.
+              const modelIgnoresEffort =
+                modelOption?.supportsReasoningEffort !== true;
+              const inheritedLabel =
+                PRESET_REASONING_EFFORT_OPTIONS.find(
+                  (option) =>
+                    option.value ===
+                    (config.generation?.reasoningEffort ?? "provider-default"),
+                )?.label ?? "Provider default";
+              return (
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={preset.reasoningEffort ?? INHERIT_REASONING_EFFORT}
+                    onValueChange={(value) =>
+                      handlePresetReasoningEffortChange(presetKey, value)
+                    }
+                  >
+                    <SelectTrigger
+                      aria-label={`Reasoning Effort for ${presetDisplayNames[presetKey]}`}
+                    />
+                    <SelectContent>
+                      <SelectItem
+                        value={INHERIT_REASONING_EFFORT}
+                        title="Follow the global Generation controls setting."
+                      >
+                        {`Inherit (${inheritedLabel})`}
+                      </SelectItem>
+                      {PRESET_REASONING_EFFORT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {modelIgnoresEffort && (
+                    <FiAlertCircle
+                      aria-hidden="true"
+                      className="text-[color:var(--ai-text-muted)]"
+                      size={14}
+                      title={`${modelOption?.label ?? preset.llmModel} does not support reasoning effort. This setting has no effect until this preset uses a reasoning-capable model.`}
+                    />
+                  )}
+                </div>
+              );
+            })}
             {renderRow("Embedding Model", (presetKey) => (
               <Select
                 value={presets[presetKey].embeddingModel}
@@ -748,7 +822,9 @@ export function SessionPresetsCard({
             ))}
           </div>
           <div className="grid grid-cols-[minmax(200px,1fr)_repeat(4,minmax(0,1fr))] gap-4 items-start rounded-2xl border border-[var(--ai-role-border-muted)] bg-[var(--ai-role-surface-2)]/50 px-4 py-3">
-            <div className={sessionGridSectionLabelClass}>Context & History</div>
+            <div className={sessionGridSectionLabelClass}>
+              Context & History
+            </div>
             {presetDisplayOrder.map((presetKey) => (
               <div
                 key={`context-section-${presetKey}`}

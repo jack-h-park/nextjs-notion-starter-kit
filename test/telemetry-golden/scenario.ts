@@ -38,6 +38,7 @@ export async function runGoldenScenario(trace: LangfuseTrace): Promise<void> {
     presetKey: "golden",
     safeMode: false,
     llmModel: "gpt-4o-mini",
+    reasoningEffort: "provider-default",
     embeddingModel: "text-embedding-ada-002",
     rag: {
       enabled: true,
