@@ -168,6 +168,10 @@ export interface AdminChatConfig {
 export interface AdminPresetConfig extends SessionChatConfigPreset {
   additionalSystemPrompt?: string;
   requireLocal?: boolean;
+  // Per-preset override for `generation.reasoningEffort`. Undefined means
+  // "inherit the global setting", not "none". Resolve via
+  // resolveReasoningEffort() rather than reading this directly.
+  reasoningEffort?: AdminReasoningEffort;
 }
 
 export type AdminChatPresetsConfig = Record<string, AdminPresetConfig> & {
@@ -184,7 +188,6 @@ export type ChatEngineType =
   | "local-ollama"
   | "local-lmstudio"
   | "unknown";
-
 
 export { type TelemetryDetailLevel } from "@/lib/logging/types";
 export {

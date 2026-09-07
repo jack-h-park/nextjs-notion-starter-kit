@@ -1,5 +1,7 @@
 import type { AdminChatConfig, RagRankingConfig } from "@/types/chat-config";
 
+import { resolveReasoningEffort } from "@/lib/server/admin-chat-config";
+
 import { DOC_TYPE_WEIGHTS, PERSONA_WEIGHTS } from "./ranking";
 import { type ChatConfigSnapshot, type GuardrailRoute } from "./types";
 
@@ -22,6 +24,9 @@ export function buildChatConfigSnapshot(
 
     safeMode: Boolean(preset.safeMode),
     llmModel: preset.llmModel,
+    reasoningEffort:
+      resolveReasoningEffort(adminConfig, String(presetKey)) ??
+      "provider-default",
     embeddingModel: preset.embeddingModel,
 
     rag: {

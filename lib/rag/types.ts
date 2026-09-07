@@ -7,6 +7,10 @@ export type ChatConfigSnapshot = {
   // Engine & models
   safeMode: boolean;
   llmModel: string;
+  // Effective reasoning effort after preset override and global fallback are
+  // applied — "provider-default" when no explicit effort is sent. Recorded so a
+  // trace shows what the model was actually asked to do, not just which model.
+  reasoningEffort: string;
   embeddingModel: string;
 
   // RAG / retrieval configuration

@@ -6,10 +6,7 @@ import type {
   PERSONA_TYPE_OPTIONS,
 } from "@/lib/rag/metadata";
 import { normalizeLlmModelId } from "@/lib/core/llm-registry";
-import {
-  PRESET_DISPLAY_ORDER,
-  PRESET_LABELS,
-} from "@/lib/shared/chat-labels";
+import { PRESET_DISPLAY_ORDER, PRESET_LABELS } from "@/lib/shared/chat-labels";
 import { type ModelProvider } from "@/lib/shared/model-provider";
 import {
   type EmbeddingModelId,
@@ -79,6 +76,7 @@ export type AdminLlmModelOption = {
   localBackend?: LocalLlmBackend;
   subtitle?: string;
   deprecated?: boolean;
+  supportsReasoningEffort?: boolean;
 };
 
 export function useAdminChatConfig({
@@ -346,6 +344,7 @@ export function useAdminChatConfig({
           localBackend: definition?.localBackend,
           subtitle: definition?.subtitle,
           deprecated: definition?.deprecated,
+          supportsReasoningEffort: definition?.supportsReasoningEffort,
         };
       }),
     [llmModelUnionIds],

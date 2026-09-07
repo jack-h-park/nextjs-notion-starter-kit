@@ -71,6 +71,7 @@ const DEFAULT_SNAPSHOT: ChatConfigSnapshot = {
   presetKey: "default",
   safeMode: false,
   llmModel: "unknown",
+  reasoningEffort: "provider-default",
   embeddingModel: "unknown",
   rag: {
     enabled: false,

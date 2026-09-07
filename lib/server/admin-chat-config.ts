@@ -12,6 +12,7 @@ import { supabaseClient } from "@/lib/core/supabase";
 import { startDbQuery } from "@/lib/logging/db-logger";
 import {
   type AdminChatConfig,
+  type AdminReasoningEffort,
   type RagAutoMode,
   type RagMultiQueryMode,
 } from "@/types/chat-config";
@@ -20,20 +21,19 @@ export const ADMIN_CHAT_CONFIG_KEY = "admin_chat_config";
 const DEFAULT_ADMIN_CHAT_CONFIG: Pick<
   AdminChatConfig,
   "telemetry" | "cache" | "generation"
-> =
-  {
-    telemetry: {
-      sampleRate: 1,
-      detailLevel: "standard",
-    },
-    cache: {
-      responseTtlSeconds: 300,
-      retrievalTtlSeconds: 60,
-    },
-    generation: {
-      reasoningEffort: "provider-default",
-    },
-  };
+> = {
+  telemetry: {
+    sampleRate: 1,
+    detailLevel: "standard",
+  },
+  cache: {
+    responseTtlSeconds: 300,
+    retrievalTtlSeconds: 60,
+  },
+  generation: {
+    reasoningEffort: "provider-default",
+  },
+};
 
 // NOTE:
 // The system_settings table is expected to contain exactly one row for chat configuration:
@@ -102,6 +102,11 @@ export type SummaryLevel = "off" | "low" | "medium" | "high";
 export type AdminChatPreset = {
   additionalSystemPrompt?: string;
   llmModel: LlmModelId;
+  // Per-preset override for generation.reasoningEffort. Undefined means "inherit
+  // the global setting" — which is what every preset does until someone sets one,
+  // so existing config rows keep their current behavior untouched.
+  // Resolve with resolveReasoningEffort(); never read this field directly.
+  reasoningEffort?: AdminReasoningEffort;
   embeddingModel: EmbeddingModelId;
   rag: RagPreset;
   context: ContextPreset;
@@ -236,6 +241,52 @@ export const DEFAULT_ADMIN_CHAT_PRESETS: AdminChatPresetsConfig = {
     showCitations: false,
   },
 };
+
+const REASONING_EFFORTS: readonly AdminReasoningEffort[] = [
+  "provider-default",
+  "none",
+  "low",
+  "medium",
+  "high",
+];
+
+function normalizeReasoningEffort(
+  value: unknown,
+): AdminReasoningEffort | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const normalized = value.trim().toLowerCase();
+  return REASONING_EFFORTS.find((effort) => effort === normalized);
+}
+
+/**
+ * Resolve the reasoning effort that should actually be sent to the provider for
+ * one preset.
+ *
+ * Precedence: preset override -> global generation setting -> provider default.
+ *
+ * Returns `undefined` for "provider-default", because that is how the provider
+ * factory spells "send no reasoning parameter at all" — an explicit
+ * "provider-default" string would be an invalid effort value on the wire.
+ *
+ * Callers must not read `preset.reasoningEffort` directly; an unset override is
+ * inheritance, not "none", and the two behave very differently on a reasoning
+ * model.
+ */
+export function resolveReasoningEffort(
+  config: Pick<AdminChatConfig, "generation" | "presets">,
+  presetId: string | null | undefined,
+): Exclude<AdminReasoningEffort, "provider-default"> | undefined {
+  const presetOverride = presetId
+    ? normalizeReasoningEffort(config.presets?.[presetId]?.reasoningEffort)
+    : undefined;
+  const effort =
+    presetOverride ??
+    normalizeReasoningEffort(config.generation?.reasoningEffort) ??
+    "provider-default";
+  return effort === "provider-default" ? undefined : effort;
+}
 
 export type RagRankingConfig = {
   docTypeWeights: Partial<Record<DocType, number>>;
@@ -393,10 +444,23 @@ function parseAdminChatConfig(value: unknown): AdminChatConfig {
     requireLocal: true,
   };
 
-  const finalPresets: AdminChatPresetsConfig = {
-    ...mergedPresets,
-    "local-required": localRequiredPreset,
-  };
+  const finalPresets: AdminChatPresetsConfig = Object.fromEntries(
+    Object.entries({
+      ...mergedPresets,
+      "local-required": localRequiredPreset,
+    }).map(([key, preset]) => [
+      key,
+      // Drop an unrecognized stored effort rather than passing it through to the
+      // provider. Undefined means "inherit the global setting", which is the
+      // right thing to fall back to for a value we cannot interpret.
+      preset.reasoningEffort === undefined
+        ? preset
+        : {
+            ...preset,
+            reasoningEffort: normalizeReasoningEffort(preset.reasoningEffort),
+          },
+    ]),
+  ) as AdminChatPresetsConfig;
 
   const hydeMode = normalizeRagAutoMode(
     mergedConfig.hydeMode,
