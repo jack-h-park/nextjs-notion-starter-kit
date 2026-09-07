@@ -135,6 +135,23 @@ const COMPLETE_PROMPT =
 const SPEED_PROMPT =
   "Focus on speed and brevity. Prefer short, direct answers. Avoid unnecessary explanations or deep reasoning.";
 
+// MERGE BASE ONLY — editing these values does not change a running deployment.
+//
+// The effective presets are the `admin_chat_config` row in the Supabase
+// `system_settings` table; these constants are only what that row is merged
+// *onto* (see parseAdminChatConfig below). The merge is per preset key, not per
+// field: a preset the DB row defines replaces the default for that preset
+// whole, so a model changed here is silently discarded for every preset the row
+// already carries — the PR merges, the deploy is green, and nothing changes.
+//
+// Symptom to recognize: the admin dashboard shows a model these constants do
+// not name. That difference is the DB row, working as designed.
+//
+// To change a preset for real, use the admin dashboard (Chat Config → Session
+// presets), which upserts that row. Change the values here only to move the
+// fallback for deployments with no row yet, or for a preset key the row omits.
+//
+// See docs/chat/session-presets.md § Where Preset Values Actually Come From.
 export const DEFAULT_ADMIN_CHAT_PRESETS: AdminChatPresetsConfig = {
   default: {
     additionalSystemPrompt: CONCISE_PROMPT,

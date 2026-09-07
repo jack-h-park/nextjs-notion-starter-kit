@@ -6,12 +6,46 @@
 
 The canonical guardrail contract defines which preset shapes are allowed. This page documents the current default preset values implemented in `lib/server/admin-chat-config.ts`.
 
+## Where Preset Values Actually Come From
+
+**Preset values are data, not code.** The live values are the `admin_chat_config` row in the
+Supabase `system_settings` table. `DEFAULT_ADMIN_CHAT_PRESETS` in
+`lib/server/admin-chat-config.ts` is only the *merge base* underneath it:
+
+```
+effective preset = DEFAULT_ADMIN_CHAT_PRESETS  <-  admin_chat_config.presets (per preset key)
+```
+
+The merge is per preset key, not per field (`parseAdminChatConfig`): a preset present in the DB
+row replaces the code default for that preset **whole**. A preset absent from the DB row falls
+through to the code default.
+
+The practical consequence, and the reason this section exists:
+
+> **Editing `DEFAULT_ADMIN_CHAT_PRESETS` does not change production for any preset the DB row
+> already defines.** A PR that changes a model there can merge, deploy green, and change
+> nothing — silently. This has already caused one wasted round of analysis; see
+> [preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md).
+
+You can see the override happening without touching the database: the code default for the
+Balanced preset is `gpt-4o`, while the running settings UI has shown `gpt-4o-mini`. That
+difference *is* the DB row.
+
+**To change a preset value for real,** use the admin dashboard (Chat Config → Session presets),
+which upserts the `admin_chat_config` row. Change the code defaults only when you intend to
+change the fallback for deployments that have no DB row yet — a fresh environment, or a preset
+key the row omits.
+
 ## Reading This Page
 
-- These values describe the repository defaults, not a permanent guarantee for every deployment.
-- Admin configuration can override these defaults.
+- The values below are the **repository defaults**, i.e. the merge base — not what any given
+  deployment is running. To see what production is running, open the admin dashboard.
 - Session-level overrides can change a subset of fields after a preset is applied.
-- If code and this page disagree, treat `lib/server/admin-chat-config.ts` as the implementation source and update this document.
+- If code and this page disagree, treat `lib/server/admin-chat-config.ts` as the implementation
+  source and update this document. (As of 2026-09 several values below have drifted from the
+  code — treat them as illustrative until reconciled.)
+- If the admin dashboard and this page disagree, that is expected and is not a bug: the
+  dashboard shows effective values, this page shows defaults.
 
 ## Balanced (Default)
 
@@ -169,3 +203,15 @@ tokens on reasoning.
 - [guardrail-system.md](../canonical/guardrails/guardrail-system.md)
 - [rag-system.md](../canonical/rag/rag-system.md)
 - [settings-ownership-audit-local-adapter.md](./settings-ownership-audit-local-adapter.md)
+- [preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md)
+
+## Reasoning Effort Is Global, Not Per-Preset
+
+`AdminChatConfig.generation.reasoningEffort` is a single top-level field (a sibling of
+`presets`), applied to whichever presets happen to resolve to a reasoning-capable model. It is
+configurable in the admin dashboard under **Generation controls**, with five values from
+`provider-default` to `high`.
+
+There is no per-preset reasoning effort. "Fast at `none`, Balanced at `medium`" is not
+expressible today. This matters as soon as presets stop sharing one model family — see
+[preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md#known-gap-reasoning-effort-is-global-not-per-preset).
