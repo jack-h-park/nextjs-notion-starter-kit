@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveReasoningEffort } from "@/lib/server/admin-chat-config";
 import type { AdminChatConfig } from "@/types/chat-config";
+import { resolveReasoningEffort } from "@/lib/server/admin-chat-config";
 
 type EffortConfig = Pick<AdminChatConfig, "generation" | "presets">;
 

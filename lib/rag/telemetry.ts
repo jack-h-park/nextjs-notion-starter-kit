@@ -1,5 +1,4 @@
 import type { AdminChatConfig, RagRankingConfig } from "@/types/chat-config";
-
 import { resolveReasoningEffort } from "@/lib/server/admin-chat-config";
 
 import { DOC_TYPE_WEIGHTS, PERSONA_WEIGHTS } from "./ranking";
