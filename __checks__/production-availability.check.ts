@@ -7,9 +7,10 @@ import {
   WebhookAlertChannel,
 } from 'checkly/constructs'
 
-// ONE location. A second region mostly confirms the first behind a global CDN,
-// and it doubles the run count — which is the binding constraint (see the budget
-// note below).
+// ONE location. A second region mostly confirms the first behind a global CDN.
+// (It also doubles the run count, which an earlier version of this comment called
+// "the binding constraint" — it is not, see the budget note below. The measured
+// argument that follows is the whole reason, and it stands on its own.)
 //
 // N. Virginia, and this is measured rather than assumed: PostHog $pageview over
 // the 30 days to 2026-09-04 was 94.2% United States (130/138 views, 20 of 25
@@ -80,7 +81,7 @@ function monitor(
 ) {
   new UrlMonitor(logicalId, {
     name,
-    frequency: Frequency.EVERY_30M,
+    frequency: Frequency.EVERY_5M,
     locations: [...productionLocations],
     retryStrategy,
     alertChannels: [emailAlert, telegramAlert],
@@ -111,23 +112,40 @@ function monitor(
 // signal that can see that failure on a schedule that fires every ~3.5 hours put
 // it back out of reach.
 //
-// So they come back here, where the cadence is actually honoured, and the budget
-// pays for it by halving the frequency rather than by dropping monitors.
+// So they come back here, where the cadence is actually honoured.
 //
-// The budget is the Hobby tier's 10,000 API runs/month, and it is a hard cap —
-// Hobby STOPS EXECUTING once exhausted, so overshooting does not cost money, it
-// costs monitoring, silently, for the rest of the month:
+// THE BUDGET, CORRECTED — the run-count arithmetic that used to live here was
+// against the wrong meter, and it cost detection latency for nothing.
 //
-//    9 monitors x 2 locations x  5m = 155,520 runs/month   (15.5x — what was live)
-//    5 monitors x 1 location  x 15m =  14,400 runs/month   (1.4x — still over)
-//    5 monitors x 1 location  x 30m =   7,200 runs/month   (72% — this)
+// Checkly bills two different things two different ways:
 //
-// Note the account is on Trial today, where the limit is a monitor COUNT
-// (UPTIME_CHECKS: 75) and none of this binds. These numbers are for the Hobby
-// plan the trial lapses into, which is when getting it wrong goes quiet.
+//    uptime monitors  (URL, TCP, DNS, ICMP, SSL, heartbeat)  by MONITOR COUNT
+//    synthetic checks (API, Browser)                         by RUN COUNT
 //
-// The remaining headroom is deliberate: singleRetry spends an extra run per
-// failure, and a bad week must not be what silences the monitor.
+// These are UrlMonitor, so they are the first kind. The Hobby tier's 10,000 API
+// runs/month is a real hard cap — it STOPS EXECUTING once exhausted, silently,
+// for the rest of the month — but it is not the meter these are on, and the
+// frequency here was halved 15m -> 30m to fit a budget they never spent.
+//
+// Measured on the dashboard Usage page, 2026-09-07, with these five live:
+//
+//    Uptime monitors                 5 / 75
+//    Multistep and API check runs    0 / 30,000     <- zero. not 7,200.
+//
+// So cadence is free and only the SLOT is scarce. Hobby allows uptime monitors
+// down to 2-minute intervals; 5m is chosen for the same reason it was before the
+// halving, not because anything forces it higher.
+//
+// WHAT DOES STILL BIND is the monitor count, which is why this is a cadence
+// change and not a restoration of the four monitors dropped earlier. The trial
+// (75 uptime monitors) lapses to Hobby (10) on 2026-09-14, and one slot now goes
+// to hermes-control-plane's ops-host heartbeat:
+//
+//    5 here + 1 ops-host heartbeat = 6 / 10
+//    9 here + 1 ops-host heartbeat = 10 / 10   <- no headroom for anything new
+//
+// singleRetry still spends an extra RUN per failure, which on this meter costs
+// nothing at all.
 //
 // The smoke run keeps the other six routes and its body assertions
 // (`<title>` contains "Ask JackGPT"), which a UrlMonitor cannot make. It stays
