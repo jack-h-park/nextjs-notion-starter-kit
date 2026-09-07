@@ -138,8 +138,8 @@ comes from `adminConfig.generation.reasoningEffort`, whose default is `"provider
 So a naive swap runs FAST at the provider's default reasoning effort, spending most completion
 tokens on reasoning. The preset whose entire purpose is latency would plausibly become the
 slowest. If FAST is ever switched to a reasoning model, its effort must be pinned to
-`none`/`low` first — which today is not expressible per preset (see
-[Known gap](#known-gap-reasoning-effort-is-global-not-per-preset)).
+`none`/`low` on the preset first (see
+[per-preset reasoning effort](#gap-found-here-now-closed-per-preset-reasoning-effort)).
 
 ## Precondition before any swap
 
@@ -147,22 +147,21 @@ slowest. If FAST is ever switched to a reasoning model, its effort must be pinne
 span would turn the next ~20 prod traces into an actual answer to the question this review
 could not answer. Without it, a gpt-5.6 rollout cannot be evaluated, only hoped for.
 
-## Known gap: reasoning effort is global, not per-preset
+## Gap found here, now closed: per-preset reasoning effort
 
-`AdminChatConfig.generation.reasoningEffort` (`types/chat-config.ts`) is a single top-level
-field, a sibling of `presets` — not a per-preset field. The admin dashboard exposes it fully
-(`components/admin/chat-config/GenerationControlsCard.tsx`: five options from
-`provider-default` through `high`), and the runtime reads it globally
-(`lib/server/api/langchain_chat_impl_heavy.ts`).
+`generation.reasoningEffort` used to be a single global field, a sibling of `presets`. That is
+adequate while presets share a model family and stops being adequate the moment they differ in
+*how much thinking* they should do — which is exactly what a mixed gpt-4o / gpt-5.6 lineup
+means. "FAST at `none`, BALANCED at `medium`" was not expressible, so the partial migration
+recommended above could not actually have been configured.
 
-This is adequate while presets share a model family. It stops being adequate the moment
-presets differ in *how much thinking* they should do — which is exactly what a mixed
-gpt-4o / gpt-5.6 lineup means. Today you cannot express "FAST at `none`, BALANCED at
-`medium`"; one global setting applies to whichever presets happen to use reasoning-capable
-models.
+Presets now carry an optional `reasoningEffort` that overrides the global value, with the
+global value as the fallback and every preset shipping unset — so behavior is unchanged until
+an override is set. The effective value is also recorded in the telemetry config snapshot, so a
+trace shows the effort the model was actually asked for. See
+[session-presets.md § Reasoning Effort](../chat/session-presets.md#reasoning-effort).
 
-Moving `reasoningEffort` into `AdminChatPreset` (with the global value as the fallback) is the
-natural fix, and it is a precondition for a *partial* migration rather than a nice-to-have.
+This was a precondition for the BALANCED-only migration, not a nice-to-have.
 
 ## How to apply the change when it happens
 

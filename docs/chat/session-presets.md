@@ -196,7 +196,8 @@ which model ran.
 A single global effort is adequate while every preset shares a model family. It stops being
 adequate as soon as presets differ in how much thinking they should do — notably, pointing Fast
 at a reasoning model without pinning its effort makes the *speed* preset spend most completion
-tokens on reasoning.
+tokens on reasoning. See
+[preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md).
 
 ## Related Docs
 
@@ -204,14 +205,3 @@ tokens on reasoning.
 - [rag-system.md](../canonical/rag/rag-system.md)
 - [settings-ownership-audit-local-adapter.md](./settings-ownership-audit-local-adapter.md)
 - [preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md)
-
-## Reasoning Effort Is Global, Not Per-Preset
-
-`AdminChatConfig.generation.reasoningEffort` is a single top-level field (a sibling of
-`presets`), applied to whichever presets happen to resolve to a reasoning-capable model. It is
-configurable in the admin dashboard under **Generation controls**, with five values from
-`provider-default` to `high`.
-
-There is no per-preset reasoning effort. "Fast at `none`, Balanced at `medium`" is not
-expressible today. This matters as soon as presets stop sharing one model family — see
-[preset-model-migration-review-2026-09.md](../analysis/preset-model-migration-review-2026-09.md#known-gap-reasoning-effort-is-global-not-per-preset).
