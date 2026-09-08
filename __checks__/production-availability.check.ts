@@ -81,7 +81,7 @@ function monitor(
 ) {
   new UrlMonitor(logicalId, {
     name,
-    frequency: Frequency.EVERY_5M,
+    frequency: Frequency.EVERY_15M,
     locations: [...productionLocations],
     retryStrategy,
     alertChannels: [emailAlert, telegramAlert],
@@ -95,7 +95,7 @@ function monitor(
   })
 }
 
-// ─── Why five, and why thirty minutes ───────────────────────────────────────
+// ─── Why one region and fifteen minutes ─────────────────────────────────────
 //
 // #158 cut this file to two monitors on the premise that
 // .github/workflows/prod-availability.yml is the primary monitor and "runs every
