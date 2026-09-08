@@ -1,8 +1,9 @@
 # Jack H. Park Studio — Brand Guidelines
 
 > **Note — moved into version control (was a loose file at the workspace root).**
-> The canonical, human-facing brand guide is the richer published page
-> [`public/assets/brand-design-system-guide.html`](../public/assets/brand-design-system-guide.html)
+> The canonical, human-facing brand guide is the richer published page at
+> [`assets.jackhpark.com/brand-design-system-guide.html`](https://assets.jackhpark.com/brand-design-system-guide.html),
+> served from Cloudflare R2 rather than included in each Vercel deployment.
 > (live component demos, newer). This markdown is the original **source spec**, preserved
 > here. The design tokens' machine-readable source lives in the `jhp-studio-design-system`
 > design project.
