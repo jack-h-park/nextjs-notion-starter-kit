@@ -35,8 +35,9 @@ export default siteConfig({
   defaultPageCover: null,
   defaultPageCoverPosition: 0.5,
 
-  // whether or not to enable support for LQIP preview images (optional)
-  isPreviewImageSupportEnabled: true,
+  // LQIP generation requires Sharp/libvips in every server render. Original
+  // images remain available through the existing image path.
+  isPreviewImageSupportEnabled: false,
 
   // default TTL (in seconds) for cached Notion pages; can be overridden via env
   notionPageCacheTTLSeconds: 60,
