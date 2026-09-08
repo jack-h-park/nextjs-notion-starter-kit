@@ -19,10 +19,11 @@ const config = defineConfig({
   logicalId: 'jackhpark-studio',
   /* Sets default values for Checks */
   checks: {
-    /* A default for how often your Check should run in minutes */
-    frequency: 5,
-    /* Checkly data centers to run your Checks as monitors */
-    locations: ['us-east-1', 'ap-northeast-2'],
+    // Five page monitors trigger ISR work. One US region every 15 minutes
+    // retains an external production signal without continuously rebuilding
+    // Notion pages and their image placeholders.
+    frequency: 15,
+    locations: ["us-east-1"],
     /** The Checkly Runtime identifier, determining npm packages and the Node.js version available at runtime.
      * See https://www.checklyhq.com/docs/cli/npm-packages/
      */

@@ -12,7 +12,6 @@ import pMemoize from "p-memoize";
 import {
   environment,
   isNotionPageCacheEnabled,
-  isPreviewImageSupportEnabled,
   navigationLinks,
   navigationStyle,
   notionPageCacheKeyPrefix,
@@ -24,7 +23,6 @@ import { errorMessage } from "./error-message";
 import { getTweetsMap } from "./get-tweets";
 import { notion } from "./notion-api";
 import { withRateLimitRetry } from "./notion-rate-limit";
-import { getPreviewImageMap } from "./preview-images";
 import {
   resolveCollectionDataId,
   unwrapRecordValue,
@@ -1125,11 +1123,8 @@ const hydrateGroupedCollectionData = async (
 /**
  * Post-fetch finalization shared by every `getPage` path.
  *
- * LQIP placeholders have to be generated *after* hydration: grouped-collection
- * hydration is what pulls gallery card blocks — and therefore their cover
- * images — into the record map. Generating earlier silently skips every
- * gallery cover. `getPreviewImage` is memoized per URL, so repeating this on
- * cache hits costs a map rebuild and picks up covers that hydration just added.
+ * Grouped-collection hydration has to happen after the initial page fetch so
+ * gallery card blocks are present in the record map before it is rendered.
  */
 const finalizeRecordMap = async (
   recordMap: ExtendedRecordMap,
@@ -1137,10 +1132,6 @@ const finalizeRecordMap = async (
   const hydrated = enableGroupedCollectionHydration
     ? await hydrateGroupedCollectionData(recordMap)
     : recordMap;
-
-  if (isPreviewImageSupportEnabled) {
-    hydrated.preview_images = await getPreviewImageMap(hydrated);
-  }
 
   return hydrated;
 };

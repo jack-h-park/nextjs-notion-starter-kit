@@ -78,11 +78,6 @@ export default withBundleAnalyzer({
   // Exclude large native binaries and dev-only cache files from serverless function bundles.
   // canvas is an optional jsdom dep we no longer use (see lib/rag/fetch-favicon.ts).
   // webpack cache files should never ship to Lambda.
-  // NOTE: sharp linux binaries must NOT be excluded — lqip-modern (via lib/notion.ts) depends on
-  // sharp at runtime and excluding its native module causes a Lambda crash.
-  // Keep sharp external so Vercel preserves the platform-specific libvips
-  // package instead of trying to bundle the native loader into the function.
-  serverExternalPackages: ["sharp"],
   outputFileTracingExcludes: {
     "*": [
       "node_modules/canvas/**",
@@ -94,18 +89,8 @@ export default withBundleAnalyzer({
   // tracing cannot discover statically. Without this the sitemap crawled at
   // build time never reaches the serverless bundle and getSiteMap() fails at
   // runtime (it refuses to re-crawl inside a function).
-  // Vercel's file tracer (@vercel/nft) cannot statically follow sharp's
-  // dynamic require() of its platform-specific @img/sharp-* optional
-  // dependencies inside pnpm's virtual store, so the libvips shared object
-  // was silently dropped from the deployed function (ERR_DLOPEN_FAILED).
-  // Force-include the whole @img/* tree so the linux-x64 binaries ship.
   outputFileTracingIncludes: {
-    "*": [
-      ".next/cache/notion-sitemap.json",
-      "node_modules/@img/**",
-      "node_modules/.pnpm/@img+sharp-libvips-linux-x64@*/node_modules/@img/sharp-libvips-linux-x64/**",
-      "node_modules/.pnpm/@img+sharp-linux-x64@*/node_modules/@img/sharp-linux-x64/**",
-    ],
+    "*": [".next/cache/notion-sitemap.json"],
   },
 });
 /* eslint-enable no-process-env */
